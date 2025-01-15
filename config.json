@@ -1,0 +1,42 @@
+{
+    "paths": {
+        "query_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/query.txt",
+        "page_in_query_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/search_in_query.txt",
+        "proxy_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/tr_rpoxy copy.txt",
+        "user_agents": "user_agents.txt",
+        "filtered_domains": "domains.txt"
+    },
+    "webdriver": {
+        "proxy": "",
+        "auth": true,
+        "incognito": false,
+        "country_domain": false,
+        "language_from_proxy": false,
+        "ss_on_exception": false,
+        "window_size": "",
+        "shift_windows": false
+    },
+    "behavior": {
+        "query": "ales",
+        "ad_page_min_wait": 10,
+        "ad_page_max_wait": 15,
+        "nonad_page_min_wait": 15,
+        "nonad_page_max_wait": 20,
+        "max_scroll_limit": 0,
+        "check_shopping_ads": true,
+        "check_only_adsclick_domain": true,
+        "excludes": "",
+        "random_mouse": false,
+        "custom_cookies": false,
+        "click_order": 5,
+        "browser_count": 2,
+        "multiprocess_style": 1,
+        "loop_wait_time": 60,
+        "running_interval_start": "00:00",
+        "running_interval_end": "00:00",
+        "2captcha_apikey": "",
+        "hooks_enabled": false,
+        "telegram_enabled": false,
+        "send_to_android": false
+    }
+}
