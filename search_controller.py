@@ -39,7 +39,7 @@ NonAdList = list[LinkElement]
 AllLinks = list[Union[AdList, NonAdList]]
 
 
-class SearchClassicController:
+class SearchController:
     """Search controller for ad clicker
 
     :type driver: selenium.webdriver
@@ -453,8 +453,7 @@ class SearchClassicController:
                                             lambda d: len(d.window_handles) > 1
                                         )
                                         sleep(get_random_sleep(3, 4.5))
-                                        self._start_random_action_threads()
-                                        self._start_random_action_threads()
+                                        self._start_move_action_threads(self)
                                         wait_time = self._get_wait_time(False)
 
                                         live_logger.info(f"Reklamlı tıklamada {self._driver.current_url} sayfasında {wait_time} saniye vakit geçirildi.  ")
@@ -713,7 +712,7 @@ class SearchClassicController:
                 if self._hooks_enabled and category in ("Ad","Shopping"):
                     hooks.after_ad_click_hook(self._driver)
 
-                self._start_random_action_threads()
+                self._start_move_action_threads()
                 url = (
                     "/".join(self._driver.current_url.split("/", maxsplit=3)[:3])
                     if category == "Shopping"
@@ -736,7 +735,7 @@ class SearchClassicController:
                     adurl_value = query_params.get("adurl", [""])[0]  # Varsayılan olarak boş bir string döndür
                     adurl_domain = urlparse(adurl_value).netloc
                     if adurl_domain not in spedomain:
-                        self._start_random_action_threads()
+                        self._start_move_action_threads()
                         self.search_ads_page_in(google_search_page,searched_page) # sayfa içi reklam ararken google kapatmasın
                     else:
                         logger.info(f"_handle_browser_click {adurl_domain} domaini özel domain olmadığı için reklamlara tıklanmayacak ")
@@ -809,6 +808,7 @@ class SearchClassicController:
             logger.info(f"Sayfa yüklendi.")             
 
             self._start_random_action_threads()
+            self._start_move_action_threads()
             WebDriverWait(self._driver, 1).until(
                 lambda d: d.execute_script("return document.readyState") == "complete"
             )
@@ -864,6 +864,7 @@ class SearchClassicController:
                     print(f"{i} reklam frame fonksiyonu basladi.")
                     logger.info(f"{i} reklam frame fonksiyonu basladi.")             
                     self._start_random_action_threads()
+                    self._start_move_action_threads()
                     sleep(get_random_sleep(1, 1.5))
                     bef_click_ads_list = list(dict.fromkeys(bef_click_ads_list))
                     bef_click_ads = self.click_ads_page_in(bef_click_ads_list,google_search_page,searched_page)
@@ -1012,6 +1013,7 @@ class SearchClassicController:
                         # Yeni sekmede rastgele kaydırma hareketleri yap
                         #perform_random_scrolls()
                         self._start_random_action_threads()
+                        self._start_move_action_threads()
 
                         # Yeni sekmeyi kapat
                         self._driver.close()
@@ -1040,6 +1042,7 @@ class SearchClassicController:
                 self._driver.switch_to.frame(prose_iframe)  # iframe içine geçiş yap
             
                 self._start_random_action_threads()
+                self._start_move_action_threads()
                 sleep(get_random_sleep(1, 1.5))
                 sleep(get_random_sleep(1, 1.5))
                 sleep(get_random_sleep(3, 5))
@@ -1087,6 +1090,7 @@ class SearchClassicController:
             self._driver.switch_to.frame(prose_iframe)  # iframe içine geçiş yap
             logger.info(f"prose_iframe içine girildi.")             
             self._start_random_action_threads()
+            self._start_move_action_threads()
             sleep(get_random_sleep(1, 1.5))
             sleep(get_random_sleep(1, 1.5))
             sleep(get_random_sleep(3, 5))
@@ -1187,6 +1191,7 @@ class SearchClassicController:
                                             # Yeni sekmede rastgele kaydırma hareketleri yap
                                             #perform_random_scrolls()
                                             self._start_random_action_threads()
+                                            self._start_move_action_threads()
 
                                             # Yeni sekmeyi kapat
                                             self._driver.close()
@@ -1258,6 +1263,82 @@ class SearchClassicController:
             timeout=float(max(self._ad_page_max_wait, self._nonad_page_max_wait))
         )
 
+    def _accept_cookie_in_page(self):
+
+        # Sayfanın tamamen yüklenmesini bekleyin
+        wait = WebDriverWait(self._driver, 5)  # 10 saniye içinde sayfanın yüklenmesini bekleyin
+        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+
+        # Cookie izni popup'ını bulun ve onaylayın
+        try:
+            # Genellikle cookie izni popup'larında "Accept", "Allow", "I Agree" gibi butonlar bulunur
+            accept_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'Allow') or contains(text(), 'Consest') or contains(text(), 'Kabul ediyorum') or contains(text(), 'I Agree')]")))
+            accept_button.click()
+            live_logger.debug("Cookie izni kabul edildi.")
+        except TimeoutException:
+            logger.debug("Cookie izni popup'u bulunamadı veya zaman aşımı yaşandı.")
+        except NoSuchElementException:
+            logger.debug("Cookie izni popup'u bulunamadı.")
+
+
+        # Genel çerez kabul etme metinlerini içeren bir liste
+        cookie_texts = [
+            "Tümünü Kabul Et", "Kabul Et", "Accept All", "Allow All", "Agree",
+            "Accept Cookies", "I Agree", "Allow Cookies"
+        ]
+
+        try:
+            # Çerez kabul düğmesini bulmak için farklı yöntemler dener
+            for text in cookie_texts:
+                try:
+                    # Düğmeyi metne göre arar
+                    button = WebDriverWait(self._driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, f"//button[contains(text(), '{text}')]"))
+                    )
+                    button.click()
+                    live_logger.debug(f"Çerez penceresi '{text}' düğmesiyle onaylandı.")
+                    break  # Bir düğme bulunduysa döngüyü durdur
+                except:
+                    continue
+
+            # Eğer hala bulunamazsa, alternatif olarak genel düğmeleri kontrol eder
+            try:
+                generic_button = WebDriverWait(self._driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "button, div[class*='cookie'], span[class*='cookie']"))
+                )
+                generic_button.click()
+                live_logger.debug("Genel çerez düğmesi bulundu ve onaylandı.")
+            except Exception as e:
+                logger.debug("Çerez düğmesi bulunamadı:", str(e))
+
+        except Exception as e:
+            logger.debug("Bir hata oluştu:", str(e))
+
+            
+    def _start_move_action_threads(self) -> None:
+        self._start_random_action_threads()
+        # Domaini ile aynı olan bir linke tıklayın
+        current_url = self._driver.current_url
+        # URL'yi ayrıştırarak domaini bulun
+        parsed_url = urlparse(current_url)
+        domain = parsed_url.netloc
+        try:
+            links = self._driver.find_elements(By.TAG_NAME, "a")
+            for link in links:
+                href = link.get_attribute("href")
+                parsed_target_url = urlparse(href)
+                target_domain = parsed_target_url.netloc
+                if target_domain == domain and href != domain and current_url != href:
+                    link.click()
+                    live_logger.error(f"Sayfa içinde {href} linkine tıklandı")
+                    break
+            else:
+                print(f"Domaini ({domain}) içeren bir bağlantı bulunamadı.")
+        except Exception as e:
+            logger.error(f"Hata oluştu: {e}")
+        self._start_random_action_threads()
+        self._accept_cookie_in_page()
+  
     def _start_random_action_threads(self) -> None:
         """Start threads for random actions on browser"""
 

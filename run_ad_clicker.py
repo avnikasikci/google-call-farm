@@ -13,7 +13,7 @@ from config_reader import config
 from logger import logger, update_log_formats
 from live_logger import live_logger, live_update_log_formats
 from proxy import get_proxies
-from search_classic_controller import SearchClassicController
+from search_controller import SearchController
 from utils import (
     get_random_user_agent_string,
     get_domains,
@@ -154,7 +154,7 @@ def main_click_one_step(args,queries,ads_query):
     search_controller = None
     try:
         search_index = 0
-        search_controller = SearchClassicController(driver, "", country_code)
+        search_controller = SearchController(driver, "", country_code)
         for query_for in queries: #reklamsız tıklama ve reklamlı tıklama query farklı olacak burada
             if isinstance(query_for, str):  # Sadece string olan öğeleri işleme al
                 print(query_for.upper())
