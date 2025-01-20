@@ -11,6 +11,7 @@ import hooks
 from clicklogs_db import ClickLogsDB
 from config_reader import config
 from logger import logger, update_log_formats
+from live_logger import live_logger, live_update_log_formats
 from proxy import get_proxies
 from search_classic_controller import SearchClassicController
 from utils import (
@@ -18,7 +19,8 @@ from utils import (
     get_domains,
     take_screenshot,
     generate_click_report,
-    get_queries
+    get_queries,
+    get_ads_queries
 )
 from webdriver import create_webdriver
 
@@ -39,6 +41,7 @@ def get_arg_parser() -> ArgumentParser:
 
     arg_parser = ArgumentParser(add_help=False, usage="See README.md file")
     arg_parser.add_argument("-q", "--query", help="Search query")
+    arg_parser.add_argument("-qa", "--query-ads", dest="ads_query", help="Search ads query")
     arg_parser.add_argument(
         "-p",
         "--proxy",
@@ -60,13 +63,10 @@ def get_arg_parser() -> ArgumentParser:
 
     return arg_parser
 
-
-def main():
+def main_click_one_step(args,queries,ads_query):
     """Entry point for the tool"""
-
-    arg_parser = get_arg_parser()
-    args = arg_parser.parse_args()
-    print(args)
+    print("im am main click for now ")
+    print(queries)
     if args.report_clicks:
         report_date = datetime.now().strftime("%d-%m-%Y") if not args.date else args.date
 
@@ -115,9 +115,6 @@ def main():
 
     if args.id:
         update_log_formats(args.id)
-
-    if args.query:
-        query = args.query
     #else:
         #if not config.behavior.query:
             #logger.error("Fill the query parameter!")
@@ -137,14 +134,10 @@ def main():
         proxy = None
 
     domains = get_domains()
-    print("domains")
-    print(domains)
     user_agent = get_random_user_agent_string()
-
     plugin_folder_name = "".join(random.choices(string.ascii_lowercase, k=5))
-
     driver, country_code = create_webdriver(proxy, user_agent, plugin_folder_name)
-
+  
     if args.check_nowsecure:
         from time import sleep
 
@@ -159,19 +152,14 @@ def main():
         hooks.before_search_hook(driver)
 
     search_controller = None
-
     try:
-        queries = []
-        if config.paths.query_file:
-            queries = get_queries()
-        else:
-            queries.append(query)
-        
-        print(queries[0])
-        search_controller = SearchClassicController(driver, queries[0], country_code)
+        search_index = 0
+        search_controller = SearchClassicController(driver, "", country_code)
         for query_for in queries: #reklamsız tıklama ve reklamlı tıklama query farklı olacak burada
             if isinstance(query_for, str):  # Sadece string olan öğeleri işleme al
                 print(query_for.upper())
+                search_index = search_index + 1
+                live_logger.info(f"{search_index}. arama işlemi yapılıyor.")
                 try:
                         if args.id:
                             search_controller.set_browser_id(args.id)
@@ -179,7 +167,9 @@ def main():
                         if args.device_id:
                             search_controller.assign_android_device(args.device_id)
                         ads, non_ad_links, shopping_ads = search_controller.search_for_ads(query_for,non_ad_domains=domains)
-                        search_controller.click_links(None,domains)
+                        ads = []
+                        #yukarıdaki reklamsız linkleri buldu bunlara şimdi tıklatıcaz.
+                        search_controller.click_links(None,domains,False)
                         print(f"hata kodlari special =0> {non_ad_links}")
                         if config.behavior.hooks_enabled:
                             hooks.after_search_hook(driver)
@@ -218,7 +208,7 @@ def main():
 
                             logger.info(f"Found {len(ads) + len(shopping_ads)} ads")
                             search_controller.click_shopping_ads(shopping_ads)
-                            search_controller.click_links(all_links,domains)
+                            search_controller.click_links(all_links,domains,False)
                             
                             if config.behavior.hooks_enabled:
                                 hooks.after_clicks_hook(driver)
@@ -229,17 +219,85 @@ def main():
                             logger.info(search_controller.stats)
 
                 except Exception as exp:
-                    logger.error("Exception for occurred. See the details in the log file.")
+                    logger.error(f"Exception for occurred. See the details in the log file.{exp}")
 
                     if config.webdriver.ss_on_exception:
                         take_screenshot(driver)
-
                     message = str(exp).split("\n")[0]
                     logger.debug(f"Exception: {message}")
                     details = traceback.format_tb(exp.__traceback__)
-                    logger.debug(f"Exception details: \n{''.join(details)}")
+                    logger.debug(f"Exception details: \n{''.join(details)}")            
+      
+        #reklamsız tık senaryosu başlatılsın.
+        if(isinstance(ads_query,str)):
+            logger.debug("*********İşlemler başlatıldı, bir kez random reklamlı tıklama yapılacak.1 sırada ki reklamlardan bir tanesine tıklama yapılacak.")
+            live_logger.info(f"İşlemler başlatıldı, bir kez random reklamlı tıklama yapılacak. Random sıradaki reklamlardan bir tanesine tıklama yapılacak.")
+            try:
+                        if args.id:
+                            search_controller.set_browser_id(args.id)
 
-            
+                        if args.device_id:
+                            search_controller.assign_android_device(args.device_id)
+                        ads, non_ad_links, shopping_ads = search_controller.search_for_ads(ads_query,non_ad_domains=domains)
+                        non_ad_links = []
+                        #yukarıdaki reklamsız linkleri buldu bunlara şimdi tıklatıcaz.
+                        search_controller.click_links(None,domains,True)
+                        print(f"hata kodlari special =0> {non_ad_links}")
+                        if config.behavior.hooks_enabled:
+                            hooks.after_search_hook(driver)
+
+                        if not (ads or shopping_ads or non_ad_links):
+                            logger.info("Classic No ads found in the search results!")
+
+                            if config.behavior.telegram_enabled:
+                                notify_matching_ads(ads_query, links=None, stats=search_controller.stats)
+                        else:
+                            logger.debug(f"Selected click order: {config.behavior.click_order}")
+
+                            if config.behavior.click_order == 1:
+                                all_links = non_ad_links + ads
+
+                            elif config.behavior.click_order == 2:
+                                all_links = ads + non_ad_links
+
+                            elif config.behavior.click_order == 3:
+                                if non_ad_links:
+                                    all_links = [non_ad_links[0]] + [ads[0]] + non_ad_links[1:] + ads[1:]
+                                else:
+                                    logger.debug("Couldn't found non-ads! Continue with ads only.")
+                                    all_links = ads
+
+                            elif config.behavior.click_order == 4:
+                                all_links = list(
+                                    filterfalse(
+                                        lambda x: not x, chain.from_iterable(zip_longest(non_ad_links, ads))
+                                    )
+                                )
+
+                            else:
+                                all_links = ads + non_ad_links
+                                random.shuffle(all_links)
+
+                            #logger.info(f"Found {len(ads) + len(shopping_ads)} ads")
+                            search_controller.click_shopping_ads(shopping_ads)
+                            search_controller.click_links(all_links,domains,True)
+                            
+                            if config.behavior.hooks_enabled:
+                                hooks.after_clicks_hook(driver)
+
+                            if config.behavior.telegram_enabled:
+                                notify_matching_ads(ads_query, links=ads + shopping_ads, stats=search_controller.stats)
+
+                            logger.info(search_controller.stats)
+
+            except Exception as exp:
+                    logger.error("Exception for occurred. See the details in the log file.")
+                    if config.webdriver.ss_on_exception:
+                        take_screenshot(driver)
+                    message = str(exp).split("\n")[0]
+                    logger.debug(f"Exception: {message}")
+                    details = traceback.format_tb(exp.__traceback__)
+                    logger.debug(f"Exception details: \n{''.join(details)}")    
     except Exception as exp:
         logger.error("Exception occurred. See the details in the log file.")
 
@@ -271,6 +329,58 @@ def main():
             logger.debug(f"Removing '{plugin_folder}' folder...")
             shutil.rmtree(plugin_folder, ignore_errors=True)
 
+def main():
+        start_index = 0
+        arg_parser = get_arg_parser()
+        args = arg_parser.parse_args()
 
+        if args.query:
+            query = args.query
+
+        if args.ads_query:
+            ads_query = args.ads_query
+
+        queries = []
+        if config.paths.query_file:
+            queries = get_queries()
+        else:
+            queries.append(query)
+
+        ads_queries = []
+        if config.paths.ads_query_file:
+            ads_queries = get_ads_queries()
+        else:
+            ads_queries.append(ads_query)
+
+        while start_index < len(queries):
+            # Rastgele tıklama sayısı belirleme
+            min_click = config.behavior.min_non_ads_click
+            max_click = config.behavior.max_non_ads_click  # max değerini doğru şekilde almayı unutmayın
+            randClickCount = random.randint(min_click, max_click)
+            live_logger.info(f"İşlemler başlatıldı, toplam {randClickCount} adet reklamsız tıklama araması yapılacak.")
+
+            # Reklamsız tıklama işlemleri
+            end_index = start_index + randClickCount
+            queries_list= []
+            for i in range(start_index, end_index):
+                if i >= len(queries):
+                    break
+                query = queries[i]
+                queries_list.append(queries[i])
+                # Reklamsız tıklama işlemini gerçekleştir
+                # Örneğin: non_ad_click_function(query)
+            print("query list ")
+            print(queries_list)
+            ads_query_rand = random.choice(ads_queries)
+            print("ads query ")
+            print(ads_query_rand)
+            #queries_list = [] # bu silecek unutma şunları aq 
+            main_click_one_step(args=args,queries=queries_list,ads_query=ads_query_rand)
+            # Araya bir işlem sokma (örneğin, beklemek veya başka bir işlem yapmak)
+            # Örneğin: time.sleep(2)  # 2 saniye bekle
+
+            # Başlangıç indeksini güncelle
+            start_index = end_index
+    
 if __name__ == "__main__":
     main()

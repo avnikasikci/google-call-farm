@@ -28,6 +28,7 @@ from adb import adb_controller
 from clicklogs_db import ClickLogsDB
 from config_reader import config
 from logger import logger
+from live_logger import live_logger
 from stats import SearchStats
 from utils import Direction, add_cookies, solve_recaptcha, get_random_sleep, resolve_redirect,get_page_queries
 
@@ -211,8 +212,6 @@ class SearchClassicController:
             search_input_box.clear()
             search_input_box.send_keys(self._search_query, Keys.ENTER)
 
-            # sleep after entering search keyword by randomly selected amount
-            # between 2 to 3 seconds
             sleep(get_random_sleep(2, 3))
 
         if self._hooks_enabled:
@@ -234,8 +233,9 @@ class SearchClassicController:
 
                 self._make_random_scrolls()
                 self._make_random_mouse_movements()
+                wait_time = self._get_wait_time(False)
 
-                self._close_choose_location_popup()
+                live_logger.info(f"Gezinme Süresi : {wait_time} Saniye")
 
                 if config.behavior.check_shopping_ads:
                     shopping_ad_links = self._get_shopping_ad_links()
@@ -245,10 +245,6 @@ class SearchClassicController:
                 print("search start")
                 ad_links,non_ad_links = self._get_ad_and_nonads_links()
                 print("search stop  link ===> ")
-                print("ad_links")
-                print(ad_links)
-                print("non_ad_links")
-                print(non_ad_links)
 
                 removed_ad_link = []
                 removed_non_ad_links = []
@@ -292,7 +288,7 @@ class SearchClassicController:
 
         return (ad_links, non_ad_links, shopping_ad_links)
         
-    def check_url(self,link_comp,non_ad_domains):
+    def check_url(self,link_comp,non_ad_domains): #verdiğimiz domaini kontrol ediyor şuan sadece hatakodlari.com çalışacak
         print("link comp")
         print(link_comp)
         is_ad_element = isinstance(link_comp, tuple)
@@ -311,7 +307,7 @@ class SearchClassicController:
             else:
                 print("URL, domain listesinde bulunan bir domain içermiyor.")
                 logger.debug( f"URL,domain [{url_domain}] removed list")
-                return False
+                return True
 
         except StaleElementReferenceException:
             logger.debug(f"Field to parsing => Ad element [{ad_title if is_ad_element else link_url}] has changed. ")
@@ -430,13 +426,16 @@ class SearchClassicController:
                                             logger.info(f"Gclick_search_ads_link adurl domain: {adurl_domain}")
 
                                             if adurl_domain not in clicked_href_list:
-                                                    logger.info(f"Gclick_search_ads_link  {index + 1}. Sponsorlu Bağlantı: {href}")
-                                                    clicked_href_list.append(adurl_domain)
-                                                    # Butona gitmeden önce scroll işlemi
-                                                    platform = sys.platform
-                                                    control_command_key = Keys.COMMAND if platform.endswith("darwin") else Keys.CONTROL
-                                                    ActionChains(self._driver).key_down(control_command_key).click(link).key_up(control_command_key).perform()
-                                                    result = True
+                                                    if(index < 1):
+                                                        logger.info(f"Gclick_search_ads_link  {index + 1}. Sponsorlu Bağlantı: {href}")
+                                                        live_logger.info(f"Reklamlı linklerden {index}. sıradakine tıklanıyor.")
+
+                                                        clicked_href_list.append(adurl_domain)
+                                                        # Butona gitmeden önce scroll işlemi
+                                                        platform = sys.platform
+                                                        control_command_key = Keys.COMMAND if platform.endswith("darwin") else Keys.CONTROL
+                                                        ActionChains(self._driver).key_down(control_command_key).click(link).key_up(control_command_key).perform()
+                                                        result = True
        
                                 except Exception as e:
                                         logger.error(f"click_search_ads_linklinke tıklanırken Hata oluştu: {e}")             
@@ -453,9 +452,14 @@ class SearchClassicController:
                                         WebDriverWait(self._driver, 20).until(
                                             lambda d: len(d.window_handles) > 1
                                         )
+                                        sleep(get_random_sleep(3, 4.5))
+                                        self._start_random_action_threads()
+                                        self._start_random_action_threads()
+                                        wait_time = self._get_wait_time(False)
+
+                                        live_logger.info(f"Reklamlı tıklamada {self._driver.current_url} sayfasında {wait_time} saniye vakit geçirildi.  ")
                                         # Yeni sekmede rastgele kaydırma hareketleri yap
                                         #perform_random_scrolls()
-                                        self._start_random_action_threads()
 
                                         # Yeni sekmeyi kapat
                                         self._driver.close()
@@ -482,60 +486,79 @@ class SearchClassicController:
         logger.info(f"i am click_search_ads_link exit for now ")
         return result
    
-    def click_links(self, links: AllLinks,spedomain) -> None: # burada tüm linklere tıklamıcaz random 2-5 arası linklere tıklayacağız
+    def click_links(self, links: AllLinks,spedomain,ads_accept) -> None: # burada tüm linklere tıklamıcaz random 2-5 arası linklere tıklayacağız
         """Click links
 
         :type links: AllLinks
         :param links: List of [(ad, ad_link, ad_title), non_ad_links]
         """
-
+        print("ads_accept")
+        print(ads_accept)
         # store the ID of the original window
         original_window_handle = self._driver.current_window_handle
-        
-
-        if(links is None):
-             self.click_search_ads_link(original_window_handle)
-             sleep(get_random_sleep(0.5, 1))
-        else :
-          for link in links:
-            is_ad_element = isinstance(link, tuple)
-
-            try:
-                self._driver.switch_to.default_content()
-                link_element, link_url, ad_title = self._extract_link_info(link, is_ad_element)
-                ### eğer linkurl yada ad_title domain uymuyorsa return etsin.
-
-                if self._hooks_enabled and is_ad_element:
-                    hooks.before_ad_click_hook(self._driver)
-
-                logger.info(
-                    f"Clicking to {'[' + ad_title + '](' + link_url + ')' if is_ad_element else '[' + link_url + ']'}..."
-                )
-               
-                # scroll the page to avoid elements remain outside of the view
-                self._driver.execute_script("arguments[0].scrollIntoView(true);", link_element)
+        print("click_links im for now")
+        try:
+            if(links is None and isinstance(ads_accept, bool)):
+                print("click_links im for now link")
+                if(ads_accept == True):
+                    print("click_links im for now ads_accept")
+                    live_logger.info(f"Reklamlı linkler araştırılıyor.")
+                    self.click_search_ads_link(original_window_handle)
                 sleep(get_random_sleep(0.5, 1))
+            else :
+            # links listesinden rastgele bir eleman seç
+                link = random.choice(links)
+                link_index = links.index(link)
+                is_ad_element = isinstance(link, tuple)
+                link_element, link_url, ad_title = self._extract_link_info(link, is_ad_element)
+                search_input_box = self._driver.find_element(*self.SEARCH_INPUT)
+                search_value = search_input_box.get_attribute("value")
+                wait_time = self._get_wait_time(False)
 
-                category = "Ad" if is_ad_element else "Non-ad"
+                live_logger.info(f"{search_value} anahtar kelimesinde, {link_index}. sırada ki reklamsız {link_url} domainine tıklandı.")
 
-                if config.behavior.send_to_android and self._android_device_id:
-                    self._handle_android_click(link_element, link_url, is_ad_element, category)
-                else:
-                    self._handle_browser_click(
-                        link_element, link_url, is_ad_element, original_window_handle, category ,spedomain
-                    )
+                print("linkie tıklandı")
+                print(link_url)
+                try:
+                            self._driver.switch_to.default_content()
+                            link_element, link_url, ad_title = self._extract_link_info(link, is_ad_element)
+                            ### eğer linkurl yada ad_title domain uymuyorsa return etsin.
 
-                # scroll the page to avoid elements remain outside of the view
-                self._driver.execute_script("arguments[0].scrollIntoView(true);", link_element)
+                            if self._hooks_enabled and is_ad_element:
+                                hooks.before_ad_click_hook(self._driver)
 
-            except StaleElementReferenceException:
-                logger.debug(
-                    f"Ad element [{ad_title if is_ad_element else link_url}] has changed. "
-                    "Skipping scroll into view..."
-                )
+                            logger.info(
+                                f"Clicking to {'[' + ad_title + '](' + link_url + ')' if is_ad_element else '[' + link_url + ']'}..."
+                            )
+                            
+                            # scroll the page to avoid elements remain outside of the view
+                            self._driver.execute_script("arguments[0].scrollIntoView(true);", link_element)
+                            sleep(get_random_sleep(0.5, 1))
 
-            except Exception:
-                logger.error(f"Failed to click on [{ad_title if is_ad_element else link_url}]!")
+                            category = "Ad" if is_ad_element else "Non-ad"
+
+                            if config.behavior.send_to_android and self._android_device_id:
+                                self._handle_android_click(link_element, link_url, is_ad_element, category)
+                            else:
+                                self._handle_browser_click(
+                                    link_element, link_url, is_ad_element, original_window_handle, category ,spedomain
+                                )
+
+                            # scroll the page to avoid elements remain outside of the view
+                            self._driver.execute_script("arguments[0].scrollIntoView(true);", link_element)
+
+                except StaleElementReferenceException:
+                            logger.debug(
+                                f"Ad element [{ad_title if is_ad_element else link_url}] has changed. "
+                                "Skipping scroll into view..."
+                            )
+
+                except Exception:
+                            logger.error(f"Failed to click on [{ad_title if is_ad_element else link_url}]!")
+
+        except Exception as exp:
+            logger.error(f"Failed to click on {exp}!")
+        
 
     def _extract_link_info(self, link: Any, is_ad_element: bool) -> tuple:
         """Extract link information
@@ -699,8 +722,9 @@ class SearchClassicController:
 
                 self._update_click_stats(url, click_time, category)
 
-                wait_time = self._get_wait_time(is_ad_element)
+                wait_time = self._get_wait_time(False)
                 logger.debug(f"Waiting {wait_time} seconds on {category.lower()} page...")
+                live_logger.info(f"Sayfada {wait_time} saniye geçilirdi. ({url})")
                 sleep(wait_time)        
                 if config.behavior.check_only_adsclick_domain:
                     curr_url = self._driver.current_url
@@ -1387,6 +1411,7 @@ class SearchClassicController:
         logger.info("Getting ad and non ad links...")
 
         ads = []
+
         non_ads = []
 
         scroll_count = 0
@@ -1425,6 +1450,11 @@ class SearchClassicController:
 
             logger.info(f"Total ads found: {len(ads)}")
             logger.info(f"Total non-ads found: {len(non_ads)}")
+       
+        #ads link bulma
+        #    
+        # 
+        ads = list({ad[2]: ad for ad in ads}.values())  # Ad links by unique href    
         return (ads,non_ads)
     
     def _get_ad_links(self) -> AdList:

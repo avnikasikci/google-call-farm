@@ -22,6 +22,7 @@ except ImportError:
 from config_reader import config
 from geolocation_db import GeolocationDB
 from logger import logger
+from live_logger import live_logger
 from proxy import install_plugin
 from utils import get_location, get_locale_language, get_random_sleep
 
@@ -192,6 +193,7 @@ def create_webdriver(
 
     if proxy:
         logger.info(f"Using proxy: {proxy}")
+        live_logger.info(f"Using proxy: {proxy}")
 
         if config.webdriver.auth:
             if "@" not in proxy or proxy.count(":") != 2:

@@ -8,7 +8,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from telegram.constants import ParseMode
 
-from logger import logger
+from live_logger import logger
 from stats import SearchStats
 
 

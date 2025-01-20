@@ -1,0 +1,21 @@
+
+{
+    "version": "1.0.0",
+    "manifest_version": 3,
+    "name": "Chrome Proxy Authentication",
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": [
+        "proxy",
+        "tabs",
+        "unlimitedStorage",
+        "storage",
+        "webRequest",
+        "webRequestAuthProvider"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "minimum_chrome_version": "108"
+}

@@ -27,6 +27,7 @@ except ImportError:
 from config_reader import config
 from geolocation_db import GeolocationDB
 from logger import logger
+from live_logger import live_logger
 
 
 class Direction(Enum):
@@ -151,6 +152,7 @@ def get_location(geolocation_db_client: GeolocationDB, proxy: str) -> tuple[floa
         return (None, None, None, None)
 
     logger.info(f"Connecting with IP: {ip_address}")
+    live_logger.info(f"Connecting with IP: {ip_address}")
 
     db_result = geolocation_db_client.query_geolocation(ip_address)
 
@@ -293,6 +295,26 @@ def get_queries() -> list[str]:
     """
 
     filepath = Path(config.paths.query_file)
+
+    if not filepath.exists():
+        raise SystemExit(f"Couldn't find queries file: {filepath}")
+
+    with open(filepath, encoding="utf-8") as queryfile:
+        queries = [
+            query.strip().replace("'", "").replace('"', "")
+            for query in queryfile.read().splitlines()
+        ]
+
+    return queries
+
+def get_ads_queries() -> list[str]:
+    """Get queries from file
+
+    :rtype: list
+    :returns: List of queries
+    """
+
+    filepath = Path(config.paths.ads_query_file)
 
     if not filepath.exists():
         raise SystemExit(f"Couldn't find queries file: {filepath}")
