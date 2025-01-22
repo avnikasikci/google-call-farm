@@ -347,7 +347,7 @@ def main():
             queries.append(query)
 
         ads_queries = []
-        if config.paths.ads_query_file:
+        if config.paths.page_in_query_file:
             ads_queries = get_ads_queries()
         else:
             ads_queries.append(ads_query)

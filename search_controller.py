@@ -82,10 +82,8 @@ class SearchController:
         self._max_scroll_limit = config.behavior.max_scroll_limit
         self._hooks_enabled = config.behavior.hooks_enabled
 
-        self._ad_page_min_wait = config.behavior.ad_page_min_wait
-        self._ad_page_max_wait = config.behavior.ad_page_max_wait
-        self._nonad_page_min_wait = config.behavior.nonad_page_min_wait
-        self._nonad_page_max_wait = config.behavior.nonad_page_max_wait
+        self._page_min_wait = config.behavior.page_min_wait
+        self._page_max_wait = config.behavior.page_max_wait
 
         self._android_device_id = None
 
@@ -233,12 +231,6 @@ class SearchController:
 
                 self._make_random_scrolls()
                 self._make_random_mouse_movements()
-                wait_time = self._get_wait_time(False)
-
-                live_logger.info(f"Gezinme Süresi : {wait_time} Saniye")
-
-                if config.behavior.check_shopping_ads:
-                    shopping_ad_links = self._get_shopping_ad_links()
 
                 #ad_links = self._get_ad_links()
                 #non_ad_links = self._get_non_ad_links(ad_links, non_ad_domains)
@@ -453,10 +445,9 @@ class SearchController:
                                             lambda d: len(d.window_handles) > 1
                                         )
                                         sleep(get_random_sleep(3, 4.5))
-                                        self._start_move_action_threads(self)
-                                        wait_time = self._get_wait_time(False)
 
-                                        live_logger.info(f"Reklamlı tıklamada {self._driver.current_url} sayfasında {wait_time} saniye vakit geçirildi.  ")
+                                        live_logger.info(f"Reklamlı tıklamada {self._driver.current_url} sayfasında saniye vakit geçiriliyor.  ")
+                                        self._start_move_action_threads(self)
                                         # Yeni sekmede rastgele kaydırma hareketleri yap
                                         #perform_random_scrolls()
 
@@ -512,7 +503,6 @@ class SearchController:
                 link_element, link_url, ad_title = self._extract_link_info(link, is_ad_element)
                 search_input_box = self._driver.find_element(*self.SEARCH_INPUT)
                 search_value = search_input_box.get_attribute("value")
-                wait_time = self._get_wait_time(False)
 
                 live_logger.info(f"{search_value} anahtar kelimesinde, {link_index}. sırada ki reklamsız {link_url} domainine tıklandı.")
 
@@ -626,7 +616,7 @@ class SearchController:
 
         self._update_click_stats(site_url, click_time, category)
 
-        wait_time = self._get_wait_time(is_ad_element)
+        wait_time = self._get_wait_time()
         logger.debug(f"Waiting {wait_time} seconds on {category.lower()} page...")
         sleep(wait_time)
 
@@ -721,7 +711,7 @@ class SearchController:
 
                 self._update_click_stats(url, click_time, category)
 
-                wait_time = self._get_wait_time(False)
+                wait_time = self._get_wait_time()
                 logger.debug(f"Waiting {wait_time} seconds on {category.lower()} page...")
                 live_logger.info(f"Sayfada {wait_time} saniye geçilirdi. ({url})")
                 sleep(wait_time)        
@@ -743,6 +733,7 @@ class SearchController:
                 break
 
         # go back to the original window
+        self._driver.close()
         self._driver.switch_to.window(original_window_handle)
         sleep(get_random_sleep(1, 1.5))
 
@@ -1218,19 +1209,15 @@ class SearchController:
         return click_ads
 
 
-    def _get_wait_time(self, is_ad_element: bool) -> int:
+    def _get_wait_time(self) -> int:
         """Get wait time based on whether the link is an ad or non-ad
 
-        :type is_ad_element: bool
         :param is_ad_element: Whether it is an ad or non-ad link
         :rtype: int
         :returns: Randomly selected number from the given range
         """
+        return random.choice(range(self._page_min_wait, self._page_max_wait))
 
-        if is_ad_element:
-            return random.choice(range(self._ad_page_min_wait, self._ad_page_max_wait))
-        else:
-            return random.choice(range(self._nonad_page_min_wait, self._nonad_page_max_wait))
 
     def _update_click_stats(self, url: str, click_time: str, category: str) -> None:
         """Update click statistics
@@ -1260,7 +1247,7 @@ class SearchController:
         random_scroll_thread = Thread(target=self._make_random_swipes)
         random_scroll_thread.start()
         random_scroll_thread.join(
-            timeout=float(max(self._ad_page_max_wait, self._nonad_page_max_wait))
+            timeout=float(max(self._page_max_wait, self._page_min_wait))
         )
 
     def _accept_cookie_in_page(self):
@@ -1314,7 +1301,16 @@ class SearchController:
         except Exception as e:
             logger.debug("Bir hata oluştu:", str(e))
 
-            
+    
+    def has_action_or_query(self,url:str):
+        parsed_url = urlparse(url)
+        
+        # Path '/' dışında bir şey içeriyor mu veya query string var mı kontrol et
+        if parsed_url.path != "/" or parsed_url.query:
+            return True  # Action veya query string var
+        return False  # Saf URL
+
+
     def _start_move_action_threads(self) -> None:
         self._start_random_action_threads()
         # Domaini ile aynı olan bir linke tıklayın
@@ -1328,7 +1324,7 @@ class SearchController:
                 href = link.get_attribute("href")
                 parsed_target_url = urlparse(href)
                 target_domain = parsed_target_url.netloc
-                if target_domain == domain and href != domain and current_url != href:
+                if target_domain == domain and self.has_action_or_query(href) and current_url != href:
                     link.click()
                     live_logger.error(f"Sayfa içinde {href} linkine tıklandı")
                     break
@@ -1341,16 +1337,23 @@ class SearchController:
   
     def _start_random_action_threads(self) -> None:
         """Start threads for random actions on browser"""
+        
 
         random_scroll_thread = Thread(target=self._make_random_scrolls)
         random_scroll_thread.start()
         random_mouse_thread = Thread(target=self._make_random_mouse_movements)
         random_mouse_thread.start()
+        timeout=float(max(self._page_max_wait, self._page_min_wait))
+
+        wait_time = self._get_wait_time() 
+        live_logger.info(f"Gezinme Süresi : {wait_time} Saniye")
+
         random_scroll_thread.join(
-            timeout=float(max(self._ad_page_max_wait, self._nonad_page_max_wait))
+            timeout=wait_time
         )
+        wait_time = self._get_wait_time() 
         random_mouse_thread.join(
-            timeout=float(max(self._ad_page_max_wait, self._nonad_page_max_wait))
+            timeout=float(max(self._page_max_wait, self._page_min_wait))
         )
 
     def end_search(self) -> None:
@@ -1373,114 +1376,6 @@ class SearchController:
         """Load Google main page"""
 
         self._driver.get(self.URL)
-
-    def _get_shopping_ad_links(self) -> AdList:
-        """Extract shopping ad links to click if exists
-
-        :rtype: AdList
-        :returns: List of (ad, ad_link, ad_title) tuples
-        """
-
-        ads = []
-
-        try:
-            logger.info("Checking shopping ads...")
-
-            # for mobile user-agents
-            if self._driver.find_elements(By.CLASS_NAME, "pla-unit-container"):
-                mobile_shopping_ads = self._driver.find_elements(
-                    By.CLASS_NAME, "pla-unit-container"
-                )
-                for shopping_ad in mobile_shopping_ads[:5]:
-                    ad = shopping_ad.find_element(By.TAG_NAME, "a")
-                    shopping_ad_link = ad.get_attribute("href")
-                    shopping_ad_title = shopping_ad.text.strip()
-                    shopping_ad_target_link = shopping_ad_link
-
-                    ad_fields = (
-                        shopping_ad,
-                        shopping_ad_link,
-                        shopping_ad_title,
-                        shopping_ad_target_link,
-                    )
-                    logger.debug(ad_fields)
-
-                    ads.append(ad_fields)
-
-            else:
-                commercial_unit_container = self._driver.find_element(By.CLASS_NAME, "cu-container")
-                shopping_ads = commercial_unit_container.find_elements(By.CLASS_NAME, "pla-unit")
-
-                for shopping_ad in shopping_ads[:5]:
-                    ad = shopping_ad.find_element(By.TAG_NAME, "a")
-                    shopping_ad_link = ad.get_attribute("href")
-
-                    ad_data_element = shopping_ad.find_element(By.CSS_SELECTOR, "a:nth-child(2)")
-                    shopping_ad_title = ad_data_element.get_attribute("aria-label")
-                    shopping_ad_target_link = ad_data_element.get_attribute("href")
-
-                    ad_fields = (
-                        shopping_ad,
-                        shopping_ad_link,
-                        shopping_ad_title,
-                        shopping_ad_target_link,
-                    )
-                    logger.debug(ad_fields)
-
-                    ads.append(ad_fields)
-
-            self._stats.shopping_ads_found = len(ads)
-
-            if not ads:
-                return []
-
-            # if there are filter words given, filter results accordingly
-            filtered_ads = []
-
-            if self._filter_words:
-                for ad in ads:
-                    ad_title = ad[2].replace("\n", " ")
-                    ad_link = ad[3]
-
-                    for word in self._filter_words:
-                        if word in ad_link or word in ad_title.lower():
-                            if ad not in filtered_ads:
-                                logger.debug(f"Filtering [{ad_title}]: {ad_link}")
-                                self._stats.num_filtered_shopping_ads += 1
-                                filtered_ads.append(ad)
-            else:
-                filtered_ads = ads
-
-            shopping_ad_links = []
-
-            for ad in filtered_ads:
-                ad_link = ad[1]
-                ad_title = ad[2].replace("\n", " ")
-                ad_target_link = ad[3]
-                logger.debug(f"Ad title: {ad_title}, Ad link: {ad_link}")
-
-                if self._exclude_list:
-                    for exclude_item in self._exclude_list:
-                        if (
-                            exclude_item in ad_target_link
-                            or exclude_item.lower() in ad_title.lower()
-                        ):
-                            logger.debug(f"Excluding [{ad_title}]: {ad_target_link}")
-                            self._stats.num_excluded_shopping_ads += 1
-                            break
-                    else:
-                        logger.info("======= Found a Shopping Ad =======")
-                        shopping_ad_links.append((ad[0], ad_link, ad_title))
-                else:
-                    logger.info("======= Found a Shopping Ad =======")
-                    shopping_ad_links.append((ad[0], ad_link, ad_title))
-
-            return shopping_ad_links
-
-        except NoSuchElementException:
-            logger.info("No shopping ads are shown!")
-
-        return ads
 
     def _get_ad_and_nonads_links(self) -> AdList:
         """Extract ad links to click

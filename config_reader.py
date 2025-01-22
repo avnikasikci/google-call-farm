@@ -9,7 +9,6 @@ from logger import logger
 @dataclass
 class PathParams:
     query_file: str
-    ads_query_file: str
     page_in_query_file: str
     proxy_file: str
     user_agents: Optional[str] = "user_agents.txt"
@@ -33,12 +32,9 @@ class BehaviorParams:
     query: str
     min_non_ads_click: Optional[int] = 2
     max_non_ads_click: Optional[int] = 3
-    ad_page_min_wait: Optional[int] = 10
-    ad_page_max_wait: Optional[int] = 15
-    nonad_page_min_wait: Optional[int] = 15
-    nonad_page_max_wait: Optional[int] = 20
+    page_min_wait: Optional[int] = 10
+    page_max_wait: Optional[int] = 15
     max_scroll_limit: Optional[int] = 0
-    check_shopping_ads: Optional[bool] = True
     check_only_adsclick_domain: Optional[bool] = True
     excludes: Optional[str] = ""
     random_mouse: Optional[bool] = False
@@ -75,7 +71,6 @@ class ConfigReader:
 
         self.paths = PathParams(
             query_file=config["paths"]["query_file"],
-            ads_query_file=config["paths"]["ads_query_file"],
             page_in_query_file=config["paths"]["page_in_query_file"],
             proxy_file=config["paths"]["proxy_file"],
             user_agents=config["paths"]["user_agents"],
@@ -107,12 +102,9 @@ class ConfigReader:
             query=config["behavior"]["query"],
             min_non_ads_click=config["behavior"]["min_non_ads_click"],
             max_non_ads_click=config["behavior"]["max_non_ads_click"],
-            ad_page_min_wait=config["behavior"]["ad_page_min_wait"],
-            ad_page_max_wait=config["behavior"]["ad_page_max_wait"],
-            nonad_page_min_wait=config["behavior"]["nonad_page_min_wait"],
-            nonad_page_max_wait=config["behavior"]["nonad_page_max_wait"],
+            page_min_wait=config["behavior"]["page_min_wait"],
+            page_max_wait=config["behavior"]["page_max_wait"],
             max_scroll_limit=config["behavior"]["max_scroll_limit"],
-            check_shopping_ads=config["behavior"]["check_shopping_ads"],
             check_only_adsclick_domain=config["behavior"]["check_only_adsclick_domain"],
             excludes=config["behavior"]["excludes"],
             random_mouse=config["behavior"]["random_mouse"],

@@ -314,7 +314,7 @@ def get_ads_queries() -> list[str]:
     :returns: List of queries
     """
 
-    filepath = Path(config.paths.ads_query_file)
+    filepath = Path(config.paths.page_in_query_file)
 
     if not filepath.exists():
         raise SystemExit(f"Couldn't find queries file: {filepath}")
