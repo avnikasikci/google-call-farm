@@ -147,9 +147,11 @@ class SearchController:
                 if not self.is_target_page_open(self._driver, self.URL):
                     # Tüm sekmeleri kapat
                     for handle in self._driver.window_handles:
-                        self._driver.switch_to.window(handle)
-                        self._driver.close()
-
+                        try:
+                            self._driver.switch_to.window(handle)
+                            self._driver.close()
+                        except Exception as e:
+                            logger.error("Tab kapatılırken hata {e}.")
                     # Yeni sekme aç ve hedef URL'ye git
                     self._driver.get(self.URL)  # Hedef sayfayı aç
                 else:
@@ -446,18 +448,22 @@ class SearchController:
                                         )
                                         sleep(get_random_sleep(3, 4.5))
 
-                                        live_logger.info(f"Reklamlı tıklamada {self._driver.current_url} sayfasında saniye vakit geçiriliyor.  ")
-                                        self._start_move_action_threads(self)
+                                        live_logger.info(f"Reklamlı tıklamada {self._driver.current_url} sayfasında vakit geçiriliyor.  ")
+                                        self._start_move_action_threads()
                                         # Yeni sekmede rastgele kaydırma hareketleri yap
                                         #perform_random_scrolls()
 
                                         # Yeni sekmeyi kapat
                                         self._driver.close()
+                                        try:
+                                           self._driver.close()
+                                        except Exception as e:
+                                            logger.error("Tab kapatılırken hata {e}.")
                                         logger.debug(f"click_search_ads_link Yeni sekme kapatıldı.")  
 
                                 except Exception as e:
                                         result =False
-                                        logger.error(f"click_search_ads_link Yeni sekmeler kapatılırken hata oluştu.{result}")  
+                                        logger.error(f"click_search_ads_link Yeni sekmeler kapatılırken hata oluştu.{result} {e}")  
 
                             self._driver.switch_to.window(google_search_page)
                         except Exception as e:
@@ -729,11 +735,17 @@ class SearchController:
                         self.search_ads_page_in(google_search_page,searched_page) # sayfa içi reklam ararken google kapatmasın
                     else:
                         logger.info(f"_handle_browser_click {adurl_domain} domaini özel domain olmadığı için reklamlara tıklanmayacak ")
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except Exception as e:
+                    logger.error("Tab kapatılırken hata {e}.")
                 break
 
         # go back to the original window
-        self._driver.close()
+        try:
+            self._driver.close()
+        except Exception as e:
+            logger.error("Tab kapatılırken hata {e}.")
         self._driver.switch_to.window(original_window_handle)
         sleep(get_random_sleep(1, 1.5))
 
@@ -1007,7 +1019,10 @@ class SearchController:
                         self._start_move_action_threads()
 
                         # Yeni sekmeyi kapat
-                        self._driver.close()
+                        try:
+                            self._driver.close()
+                        except Exception as e:
+                            logger.error("Tab kapatılırken hata {e}.")
                         logger.debug(f"Google anno sa Yeni sekme kapatıldı.")  
 
                 except Exception as e:
@@ -1185,7 +1200,10 @@ class SearchController:
                                             self._start_move_action_threads()
 
                                             # Yeni sekmeyi kapat
-                                            self._driver.close()
+                                            try:
+                                                self._driver.close()
+                                            except Exception as e:
+                                                logger.error("Tab kapatılırken hata {e}.")
                                             logger.debug(f"click_ads_page_in Yeni sekme kapatıldı.")             
 
                                             # Ana sekmeye dön

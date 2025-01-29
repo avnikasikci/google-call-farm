@@ -18,8 +18,8 @@
     },
     "behavior": {
         "query": "ales",
-        "min_non_ads_click": 2,
-        "max_non_ads_click": 4,
+        "min_non_ads_click": 1,
+        "max_non_ads_click": 1,
         "page_min_wait": 10,
         "page_max_wait": 30,
         "max_scroll_limit": 0,

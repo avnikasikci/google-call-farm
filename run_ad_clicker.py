@@ -374,10 +374,7 @@ def main():
             ads_query_rand = random.choice(ads_queries)
             print("ads query ")
             print(ads_query_rand)
-            #queries_list = [] # bu silecek unutma şunları aq 
             main_click_one_step(args=args,queries=queries_list,ads_query=ads_query_rand)
-            # Araya bir işlem sokma (örneğin, beklemek veya başka bir işlem yapmak)
-            # Örneğin: time.sleep(2)  # 2 saniye bekle
 
             # Başlangıç indeksini güncelle
             start_index = end_index
