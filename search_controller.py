@@ -1433,7 +1433,10 @@ class SearchController:
                logger.debug("Could not find results!")
 
             self._driver.find_element(By.TAG_NAME, "body").send_keys(Keys.PAGE_DOWN)
-            sleep(get_random_sleep(2, 2.5))
+            try:
+                sleep(get_random_sleep(2, 2.5))
+            except Exception as e:
+                print("Process interrtupted by user")
             #body = self._driver.find_element(By.TAG_NAME, "body")
             #body.click()  # Focus'u body'ye getir
             #body.send_keys(Keys.PAGE_DOWN)

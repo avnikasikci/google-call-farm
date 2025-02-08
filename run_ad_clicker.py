@@ -133,11 +133,14 @@ def main_click_one_step(args,queries,ads_query):
     else:
         proxy = None
 
-    domains = get_domains()
-    user_agent = get_random_user_agent_string()
-    plugin_folder_name = "".join(random.choices(string.ascii_lowercase, k=5))
-    driver, country_code = create_webdriver(proxy, user_agent, plugin_folder_name)
-  
+    try:
+        domains = get_domains()
+        user_agent = get_random_user_agent_string()
+        plugin_folder_name = "".join(random.choices(string.ascii_lowercase, k=5))
+        driver, country_code = create_webdriver(proxy, user_agent, plugin_folder_name)
+    except Exception as exp:
+      logger.error(f"Proxy session error => . {exp}")
+      live_logger.error(f"Proxy kaynaklı oturum hatası alındı")
     if args.check_nowsecure:
         from time import sleep
 
