@@ -10,7 +10,8 @@ from logger import logger
 from run_multi_ad_clicker import main as run_multi_ad_clicker_main
 from run_ad_clicker import main as run_ad_clicker_main
 from run_in_loop import main as run_in_loop_main
-
+from run_multi_restart_closed import main as run_multi_restart_closed_main
+from run_multi_restart import main as run_multi_restart_script_main
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("green")
@@ -461,25 +462,25 @@ class ActionButtonsFrame(customtkinter.CTkFrame):
 
         self.run_button_1 = customtkinter.CTkButton(
             self,
-            text="Run ad_clicker.py",
+            text="Run Multi Browser.py",
             height=self.relative_height * 3,
-            command=master.ad_clicker_script,
+            command=master.run_multi_ad_clicker_script,
         )
         self.run_button_1.grid(row=4, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.run_button_2 = customtkinter.CTkButton(
             self,
-            text="Run run_ad_clicker.py",
+            text="Run Multi Browser(Kapatılmayı Engelle).py",
             height=self.relative_height * 3,
-            command=master.run_ad_clicker_script,
+            command=master.run_multi_restart_script,
         )
         self.run_button_2.grid(row=4, column=3, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.run_button_3 = customtkinter.CTkButton(
             self,
-            text="Run run_in_loop.py",
+            text="Run Multi Browser(Programı durdurmak).py",
             height=self.relative_height * 3,
-            command=master.run_in_loop_script,
+            command=master.run_multi_restart_closed_script,
         )
         self.run_button_3.grid(row=5, column=0, columnspan=6, padx=10, pady=5, sticky="ew")
 
@@ -553,6 +554,24 @@ class ConfigGUI(customtkinter.CTk):
 
         self.close_config_ui()
         run_ad_clicker_main()
+
+    def run_multi_ad_clicker_script(self):
+        """Run the run_ad_clicker.py script"""
+
+        self.close_config_ui()
+        run_multi_ad_clicker_main()
+
+    def run_multi_restart_closed_script(self):
+        """Run the run_multi_restart_closed.py script"""
+
+        self.close_config_ui()
+        run_multi_restart_closed_main()
+
+    def run_multi_restart_script(self):
+        """Run the run_multi_restart_script.py script"""
+
+        self.close_config_ui()
+        run_multi_restart_script_main()
 
     def run_in_loop_script(self):
         """Run the run_in_loop.py script"""

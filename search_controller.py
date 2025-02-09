@@ -155,6 +155,7 @@ class SearchController:
                     # Yeni sekme aç ve hedef URL'ye git
                     self._driver.get(self.URL)  # Hedef sayfayı aç
                 else:
+                    self._driver.get(self.URL) 
                     print("Hedef sayfa zaten açık.")
 
             except Exception:

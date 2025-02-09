@@ -115,6 +115,7 @@ def main_click_one_step(args,queries,ads_query):
 
     if args.id:
         update_log_formats(args.id)
+        live_update_log_formats(args.id)
     #else:
         #if not config.behavior.query:
             #logger.error("Fill the query parameter!")
@@ -158,6 +159,11 @@ def main_click_one_step(args,queries,ads_query):
     try:
         search_index = 0
         search_controller = SearchController(driver, "", country_code)
+        if args.id:
+            search_controller.set_browser_id(args.id)
+
+        if args.device_id:
+            search_controller.assign_android_device(args.device_id)
         for query_for in queries: #reklamsız tıklama ve reklamlı tıklama query farklı olacak burada
             if isinstance(query_for, str):  # Sadece string olan öğeleri işleme al
                 print(query_for.upper())
