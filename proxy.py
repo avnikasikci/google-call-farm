@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import random
 try:
     from selenium.webdriver import ChromeOptions
 except ImportError:
@@ -33,6 +33,29 @@ def get_proxies() -> list[str]:
         ]
     return proxies
 
+def remove_proxy(proxy_to_remove: str):
+    """Remove a specific proxy from the file"""
+    
+    """Remove a specific proxy from the file, or get and remove a new one if not found"""
+
+    filepath = Path(config.paths.proxy_file)
+
+    if not filepath.exists():
+        raise SystemExit(f"Couldn't find proxy file: {filepath}")
+
+    with open(filepath, "r", encoding="utf-8") as file:
+        lines = [line.strip() for line in file.readlines()]
+
+    if proxy_to_remove not in lines:
+        raise SystemExit(f"Proxy not found in file: {proxy_to_remove}")
+
+    # Proxy'yi dosyadan sil
+    with open(filepath, "w", encoding="utf-8") as file:
+        for line in lines:
+            if line != proxy_to_remove:
+                file.write(line + "\n")
+
+    return proxy_to_remove
 
 def install_plugin(
     chrome_options: ChromeOptions,

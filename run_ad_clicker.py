@@ -13,6 +13,7 @@ from config_reader import config
 from logger import logger, update_log_formats
 from live_logger import live_logger, live_update_log_formats
 from proxy import get_proxies
+from proxy import remove_proxy
 from search_controller import SearchController
 from utils import (
     get_random_user_agent_string,
@@ -134,7 +135,12 @@ def main_click_one_step(args,queries,ads_query):
     else:
         proxy = None
 
+
     try:
+        if proxy is None:
+            raise SystemExit("Proxy bulunamadı! Lütfen bir proxy sağlayın.")
+        live_logger.debug(f"Seçilen Proxy (Siliniyor): {proxy}")
+        proxy = remove_proxy(proxy)
         domains = get_domains()
         user_agent = get_random_user_agent_string()
         plugin_folder_name = "".join(random.choices(string.ascii_lowercase, k=5))
@@ -337,8 +343,7 @@ def main_click_one_step(args,queries,ads_query):
             plugin_folder = Path.cwd() / "proxy_auth_plugin" / plugin_folder_name
             logger.debug(f"Removing '{plugin_folder}' folder...")
             shutil.rmtree(plugin_folder, ignore_errors=True)
-
-def main():
+def main_with_ads():
         start_index = 0
         arg_parser = get_arg_parser()
         args = arg_parser.parse_args()
@@ -355,6 +360,7 @@ def main():
         else:
             queries.append(query)
 
+        random.shuffle(queries)
         ads_queries = []
         if config.paths.page_in_query_file:
             ads_queries = get_ads_queries()
@@ -378,8 +384,7 @@ def main():
                 queries_list.append(queries[i])
                 # Reklamsız tıklama işlemini gerçekleştir
                 # Örneğin: non_ad_click_function(query)
-            print("query list ")
-            print(queries_list)
+
             ads_query_rand = random.choice(ads_queries)
             print("ads query ")
             print(ads_query_rand)
@@ -387,6 +392,53 @@ def main():
 
             # Başlangıç indeksini güncelle
             start_index = end_index
+def main_with_nonads():
+        start_index = 0
+        arg_parser = get_arg_parser()
+        args = arg_parser.parse_args()
+
+        if args.query:
+            query = args.query
+
+        if args.ads_query:
+            ads_query = args.ads_query
+
+        queries = []
+        if config.paths.query_file:
+            queries = get_queries()
+        else:
+            queries.append(query)
+
+        random.shuffle(queries)
+        ads_queries = []
+        if config.paths.page_in_query_file:
+            ads_queries = get_ads_queries()
+        else:
+            ads_queries.append(ads_query)
+
+        while start_index < len(queries):
+            # Rastgele tıklama sayısı belirleme
+            min_click = config.behavior.min_non_ads_click
+            max_click = config.behavior.max_non_ads_click  # max değerini doğru şekilde almayı unutmayın
+            randClickCount = random.randint(min_click, max_click)
+            live_logger.info(f"İşlemler başlatıldı, toplam {randClickCount} adet reklamsız tıklama araması yapılacak.")
+
+            # Reklamsız tıklama işlemleri
+            end_index = start_index + randClickCount
+            queries_list= []
+            for i in range(start_index, end_index):
+                if i >= len(queries):
+                    break
+                query = queries[i]
+                queries_list.append(queries[i])
+            main_click_one_step(args=args,queries=queries_list,ads_query="")
+
+            # Başlangıç indeksini güncelle
+            start_index = end_index
+
+def main():
+    main_with_nonads()
+    main_with_ads()
     
 if __name__ == "__main__":
     main()

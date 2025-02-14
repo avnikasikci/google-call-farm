@@ -1,7 +1,7 @@
 {
     "paths": {
-        "query_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/query.txt",
-        "page_in_query_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/search_in_query.txt",
+        "query_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/aranacak_tr.txt",
+        "page_in_query_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/tık_tr.txt",
         "proxy_file": "/Users/avnikasikci/Desktop/Avni/Github/forkRepo/google-call-farm/assets/tr_rpoxy copy.txt",
         "user_agents": "user_agents.txt",
         "filtered_domains": "domains.txt"
@@ -31,6 +31,7 @@
         "browser_count": 2,
         "multiprocess_style": 1,
         "loop_wait_time": 60,
+        "wait_factor": 1.0,
         "running_interval_start": "00:00",
         "running_interval_end": "00:00",
         "2captcha_apikey": "",
